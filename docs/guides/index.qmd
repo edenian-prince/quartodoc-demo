@@ -1,0 +1,45 @@
+---
+title: Guides and Onboarding
+description: Our desk manuals, guides, procedures, and policies
+number-sections: false
+page-layout: article
+format: 
+  html: 
+    number-sections: false
+    title-block-banner: false
+    toc: false
+execute: 
+  freeze: true
+---
+
+::::{.container}
+
+:::{.column width="50%"}
+
+{{< bi diagram-3-fill size=4em >}}
+
+### [Onboarding](onboarding.qmd)
+
+- Installation
+- Get project access
+- Getting started with desk manuals
+- Flowcharts and pipeline documentation
+
+:::
+
+:::{.column width="50%"}
+
+{{< bi card-checklist size=4em >}}
+
+
+###  [Guides](guides.qmd)
+
+- Github guides
+- Databricks/Azure guides
+- Tutorials and tech troubleshooting
+
+
+:::
+
+
+::::

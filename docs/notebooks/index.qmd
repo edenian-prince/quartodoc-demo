@@ -1,0 +1,18 @@
+# Function reference {.doc .doc-index}
+
+## Main Functions
+
+Functions to inspect docstrings.
+
+| | |
+| --- | --- |
+| [functions](functions.qmd#functions) |  |
+| [group_by](group_by.qmd#group_by) |  |
+
+## Notebooks
+
+Scripts and notebooks for the pipeline
+
+| | |
+| --- | --- |
+| [script](script.qmd#script) | Better CSV Storage |

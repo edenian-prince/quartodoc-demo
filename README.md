@@ -1,2 +1,2 @@
-# quartodoc-demo
-demo of quartodoc for python documentation
+# quartodoc-py-test
+testing out quartodoc for python package documentation

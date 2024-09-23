@@ -1,0 +1,790 @@
+# group_by { #group_by }
+
+``
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [DynamicGroupBy](#group_by.DynamicGroupBy) | A dynamic grouper. |
+| [GroupBy](#group_by.GroupBy) | Starts a new GroupBy operation. |
+| [RollingGroupBy](#group_by.RollingGroupBy) | A rolling grouper. |
+
+### DynamicGroupBy { #group_by.DynamicGroupBy }
+
+`DynamicGroupBy(self, df, index_column, *, every, period, offset, include_boundaries, closed, label, group_by, start_by)`
+
+A dynamic grouper.
+
+This has an `.agg` method which allows you to run all polars expressions in a
+group by context.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [agg](#group_by.DynamicGroupBy.agg) | Compute aggregations for each group of a group by operation. |
+| [map_groups](#group_by.DynamicGroupBy.map_groups) | Apply a custom/user-defined function (UDF) over the groups as a new DataFrame. |
+
+##### agg { #group_by.DynamicGroupBy.agg }
+
+`DynamicGroupBy.agg(*aggs, **named_aggs)`
+
+Compute aggregations for each group of a group by operation.
+
+###### Parameters
+
+| Name           | Type                             | Description                                                                                                                                                        | Default   |
+|----------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `*aggs`        | IntoExpr \| Iterable\[IntoExpr\] | Aggregations to compute for each group of the group by operation, specified as positional arguments. Accepts expression input. Strings are parsed as column names. | `()`      |
+| `**named_aggs` | IntoExpr                         | Additional aggregations, specified as keyword arguments. The resulting columns will be renamed to the keyword used.                                                | `{}`      |
+
+##### map_groups { #group_by.DynamicGroupBy.map_groups }
+
+`DynamicGroupBy.map_groups(function, schema)`
+
+Apply a custom/user-defined function (UDF) over the groups as a new DataFrame.
+
+Using this is considered an anti-pattern as it will be very slow because:
+
+- it forces the engine to materialize the whole `DataFrames` for the groups.
+- it is not parallelized.
+- it blocks optimizations as the passed python function is opaque to the
+  optimizer.
+
+The idiomatic way to apply custom functions over multiple columns is using:
+
+`pl.struct([my_columns]).map_elements(lambda struct_series: ..)`
+
+###### Parameters
+
+| Name       | Type                                 | Description                                                                                                                                                                                                           | Default    |
+|------------|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `function` | Callable\[\[DataFrame\], DataFrame\] | Function to apply over each group of the `LazyFrame`; it receives a DataFrame and should return a DataFrame.                                                                                                          | _required_ |
+| `schema`   | SchemaDict \| None                   | Schema of the output function. This has to be known statically. If the given schema is incorrect, this is a bug in the caller's query and may lead to errors. If set to None, polars assumes the schema is unchanged. | _required_ |
+
+### GroupBy { #group_by.GroupBy }
+
+`GroupBy(self, df, *by, maintain_order, **named_by)`
+
+Starts a new GroupBy operation.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [agg](#group_by.GroupBy.agg) | Compute aggregations for each group of a group by operation. |
+| [all](#group_by.GroupBy.all) | Aggregate the groups into Series. |
+| [count](#group_by.GroupBy.count) | Return the number of rows in each group. |
+| [first](#group_by.GroupBy.first) | Aggregate the first values in the group. |
+| [head](#group_by.GroupBy.head) | Get the first `n` rows of each group. |
+| [last](#group_by.GroupBy.last) | Aggregate the last values in the group. |
+| [len](#group_by.GroupBy.len) | Return the number of rows in each group. |
+| [map_groups](#group_by.GroupBy.map_groups) | Apply a custom/user-defined function (UDF) over the groups as a sub-DataFrame. |
+| [max](#group_by.GroupBy.max) | Reduce the groups to the maximal value. |
+| [mean](#group_by.GroupBy.mean) | Reduce the groups to the mean values. |
+| [median](#group_by.GroupBy.median) | Return the median per group. |
+| [min](#group_by.GroupBy.min) | Reduce the groups to the minimal value. |
+| [n_unique](#group_by.GroupBy.n_unique) | Count the unique values per group. |
+| [quantile](#group_by.GroupBy.quantile) | Compute the quantile per group. |
+| [sum](#group_by.GroupBy.sum) | Reduce the groups to the sum. |
+| [tail](#group_by.GroupBy.tail) | Get the last `n` rows of each group. |
+
+##### agg { #group_by.GroupBy.agg }
+
+`GroupBy.agg(*aggs, **named_aggs)`
+
+Compute aggregations for each group of a group by operation.
+
+###### Parameters
+
+| Name           | Type                             | Description                                                                                                                                                        | Default   |
+|----------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `*aggs`        | IntoExpr \| Iterable\[IntoExpr\] | Aggregations to compute for each group of the group by operation, specified as positional arguments. Accepts expression input. Strings are parsed as column names. | `()`      |
+| `**named_aggs` | IntoExpr                         | Additional aggregations, specified as keyword arguments. The resulting columns will be renamed to the keyword used.                                                | `{}`      |
+
+###### Examples
+
+Compute the aggregation of the columns for each group.
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": ["a", "b", "a", "b", "c"],
+...         "b": [1, 2, 1, 3, 3],
+...         "c": [5, 4, 3, 2, 1],
+...     }
+... )
+>>> df.group_by("a").agg(pl.col("b"), pl.col("c"))
+shape: (3, 3)
+┌─────┬───────────┬───────────┐
+│ a   ┆ b         ┆ c         │
+│ --- ┆ ---       ┆ ---       │
+│ str ┆ list[i64] ┆ list[i64] │
+╞═════╪═══════════╪═══════════╡
+│ a   ┆ [1, 1]    ┆ [5, 3]    │
+├╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌┤
+│ b   ┆ [2, 3]    ┆ [4, 2]    │
+├╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌┤
+│ c   ┆ [3]       ┆ [1]       │
+└─────┴───────────┴───────────┘
+```
+
+Compute the sum of a column for each group.
+
+```python
+>>> df.group_by("a").agg(pl.col("b").sum())
+shape: (3, 2)
+┌─────┬─────┐
+│ a   ┆ b   │
+│ --- ┆ --- │
+│ str ┆ i64 │
+╞═════╪═════╡
+│ a   ┆ 2   │
+│ b   ┆ 5   │
+│ c   ┆ 3   │
+└─────┴─────┘
+```
+
+Compute multiple aggregates at once by passing a list of expressions.
+
+```python
+>>> df.group_by("a").agg([pl.sum("b"), pl.mean("c")])
+shape: (3, 3)
+┌─────┬─────┬─────┐
+│ a   ┆ b   ┆ c   │
+│ --- ┆ --- ┆ --- │
+│ str ┆ i64 ┆ f64 │
+╞═════╪═════╪═════╡
+│ c   ┆ 3   ┆ 1.0 │
+│ a   ┆ 2   ┆ 4.0 │
+│ b   ┆ 5   ┆ 3.0 │
+└─────┴─────┴─────┘
+```
+
+Or use positional arguments to compute multiple aggregations in the same way.
+
+```python
+>>> df.group_by("a").agg(
+...     pl.sum("b").name.suffix("_sum"),
+...     (pl.col("c") ** 2).mean().name.suffix("_mean_squared"),
+... )
+shape: (3, 3)
+┌─────┬───────┬────────────────┐
+│ a   ┆ b_sum ┆ c_mean_squared │
+│ --- ┆ ---   ┆ ---            │
+│ str ┆ i64   ┆ f64            │
+╞═════╪═══════╪════════════════╡
+│ a   ┆ 2     ┆ 17.0           │
+│ c   ┆ 3     ┆ 1.0            │
+│ b   ┆ 5     ┆ 10.0           │
+└─────┴───────┴────────────────┘
+```
+
+Use keyword arguments to easily name your expression inputs.
+
+```python
+>>> df.group_by("a").agg(
+...     b_sum=pl.sum("b"),
+...     c_mean_squared=(pl.col("c") ** 2).mean(),
+... )
+shape: (3, 3)
+┌─────┬───────┬────────────────┐
+│ a   ┆ b_sum ┆ c_mean_squared │
+│ --- ┆ ---   ┆ ---            │
+│ str ┆ i64   ┆ f64            │
+╞═════╪═══════╪════════════════╡
+│ a   ┆ 2     ┆ 17.0           │
+│ c   ┆ 3     ┆ 1.0            │
+│ b   ┆ 5     ┆ 10.0           │
+└─────┴───────┴────────────────┘
+```
+
+##### all { #group_by.GroupBy.all }
+
+`GroupBy.all()`
+
+Aggregate the groups into Series.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame({"a": ["one", "two", "one", "two"], "b": [1, 2, 3, 4]})
+>>> df.group_by("a", maintain_order=True).all()
+shape: (2, 2)
+┌─────┬───────────┐
+│ a   ┆ b         │
+│ --- ┆ ---       │
+│ str ┆ list[i64] │
+╞═════╪═══════════╡
+│ one ┆ [1, 3]    │
+│ two ┆ [2, 4]    │
+└─────┴───────────┘
+```
+
+##### count { #group_by.GroupBy.count }
+
+`GroupBy.count()`
+
+Return the number of rows in each group.
+
+.. deprecated:: 0.20.5
+    This method has been renamed to :func:`GroupBy.len`.
+
+Rows containing null values count towards the total.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": ["Apple", "Apple", "Orange"],
+...         "b": [1, None, 2],
+...     }
+... )
+>>> df.group_by("a").count()
+shape: (2, 2)
+┌────────┬───────┐
+│ a      ┆ count │
+│ ---    ┆ ---   │
+│ str    ┆ u32   │
+╞════════╪═══════╡
+│ Apple  ┆ 2     │
+│ Orange ┆ 1     │
+└────────┴───────┘
+```
+
+##### first { #group_by.GroupBy.first }
+
+`GroupBy.first()`
+
+Aggregate the first values in the group.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).first()
+shape: (3, 4)
+┌────────┬─────┬──────┬───────┐
+│ d      ┆ a   ┆ b    ┆ c     │
+│ ---    ┆ --- ┆ ---  ┆ ---   │
+│ str    ┆ i64 ┆ f64  ┆ bool  │
+╞════════╪═════╪══════╪═══════╡
+│ Apple  ┆ 1   ┆ 0.5  ┆ true  │
+│ Orange ┆ 2   ┆ 0.5  ┆ true  │
+│ Banana ┆ 4   ┆ 13.0 ┆ false │
+└────────┴─────┴──────┴───────┘
+```
+
+##### head { #group_by.GroupBy.head }
+
+`GroupBy.head(n=5)`
+
+Get the first `n` rows of each group.
+
+###### Parameters
+
+| Name   | Type   | Description               | Default   |
+|--------|--------|---------------------------|-----------|
+| `n`    | int    | Number of rows to return. | `5`       |
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "letters": ["c", "c", "a", "c", "a", "b"],
+...         "nrs": [1, 2, 3, 4, 5, 6],
+...     }
+... )
+>>> df
+shape: (6, 2)
+┌─────────┬─────┐
+│ letters ┆ nrs │
+│ ---     ┆ --- │
+│ str     ┆ i64 │
+╞═════════╪═════╡
+│ c       ┆ 1   │
+│ c       ┆ 2   │
+│ a       ┆ 3   │
+│ c       ┆ 4   │
+│ a       ┆ 5   │
+│ b       ┆ 6   │
+└─────────┴─────┘
+>>> df.group_by("letters").head(2).sort("letters")
+shape: (5, 2)
+┌─────────┬─────┐
+│ letters ┆ nrs │
+│ ---     ┆ --- │
+│ str     ┆ i64 │
+╞═════════╪═════╡
+│ a       ┆ 3   │
+│ a       ┆ 5   │
+│ b       ┆ 6   │
+│ c       ┆ 1   │
+│ c       ┆ 2   │
+└─────────┴─────┘
+```
+
+##### last { #group_by.GroupBy.last }
+
+`GroupBy.last()`
+
+Aggregate the last values in the group.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 14, 13],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).last()
+shape: (3, 4)
+┌────────┬─────┬──────┬───────┐
+│ d      ┆ a   ┆ b    ┆ c     │
+│ ---    ┆ --- ┆ ---  ┆ ---   │
+│ str    ┆ i64 ┆ f64  ┆ bool  │
+╞════════╪═════╪══════╪═══════╡
+│ Apple  ┆ 3   ┆ 10.0 ┆ false │
+│ Orange ┆ 2   ┆ 0.5  ┆ true  │
+│ Banana ┆ 5   ┆ 13.0 ┆ true  │
+└────────┴─────┴──────┴───────┘
+```
+
+##### len { #group_by.GroupBy.len }
+
+`GroupBy.len(name=None)`
+
+Return the number of rows in each group.
+
+###### Parameters
+
+| Name   | Type        | Description                                                         | Default   |
+|--------|-------------|---------------------------------------------------------------------|-----------|
+| `name` | str \| None | Assign a name to the resulting column; if unset, defaults to "len". | `None`    |
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame({"a": ["Apple", "Apple", "Orange"], "b": [1, None, 2]})
+>>> df.group_by("a").len()
+shape: (2, 2)
+┌────────┬─────┐
+│ a      ┆ len │
+│ ---    ┆ --- │
+│ str    ┆ u32 │
+╞════════╪═════╡
+│ Apple  ┆ 2   │
+│ Orange ┆ 1   │
+└────────┴─────┘
+>>> df.group_by("a").len(name="n")
+shape: (2, 2)
+┌────────┬─────┐
+│ a      ┆ n   │
+│ ---    ┆ --- │
+│ str    ┆ u32 │
+╞════════╪═════╡
+│ Apple  ┆ 2   │
+│ Orange ┆ 1   │
+└────────┴─────┘
+```
+
+##### map_groups { #group_by.GroupBy.map_groups }
+
+`GroupBy.map_groups(function)`
+
+Apply a custom/user-defined function (UDF) over the groups as a sub-DataFrame.
+
+.. warning::
+    This method is much slower than the native expressions API.
+    Only use it if you cannot implement your logic otherwise.
+
+Implementing logic using a Python function is almost always *significantly*
+slower and more memory intensive than implementing the same logic using
+the native expression API because:
+
+- The native expression engine runs in Rust; UDFs run in Python.
+- Use of Python UDFs forces the DataFrame to be materialized in memory.
+- Polars-native expressions can be parallelised (UDFs cannot).
+- Polars-native expressions can be logically optimised (UDFs cannot).
+
+Wherever possible you should strongly prefer the native expression API
+to achieve the best performance.
+
+###### Parameters
+
+| Name       | Type                                 | Description                                                        | Default    |
+|------------|--------------------------------------|--------------------------------------------------------------------|------------|
+| `function` | Callable\[\[DataFrame\], DataFrame\] | Custom function that receives a DataFrame and returns a DataFrame. | _required_ |
+
+###### Returns
+
+| Type      | Description   |
+|-----------|---------------|
+| DataFrame |               |
+
+###### Examples
+
+For each color group sample two rows:
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "id": [0, 1, 2, 3, 4],
+...         "color": ["red", "green", "green", "red", "red"],
+...         "shape": ["square", "triangle", "square", "triangle", "square"],
+...     }
+... )
+>>> df.group_by("color").map_groups(
+...     lambda group_df: group_df.sample(2)
+... )
+shape: (4, 3)
+┌─────┬───────┬──────────┐
+│ id  ┆ color ┆ shape    │
+│ --- ┆ ---   ┆ ---      │
+│ i64 ┆ str   ┆ str      │
+╞═════╪═══════╪══════════╡
+│ 1   ┆ green ┆ triangle │
+│ 2   ┆ green ┆ square   │
+│ 4   ┆ red   ┆ square   │
+│ 3   ┆ red   ┆ triangle │
+└─────┴───────┴──────────┘
+```
+
+It is better to implement this with an expression:
+
+```python
+>>> df.filter(
+...     pl.int_range(pl.len()).shuffle().over("color") < 2
+... )
+```
+
+##### max { #group_by.GroupBy.max }
+
+`GroupBy.max()`
+
+Reduce the groups to the maximal value.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).max()
+shape: (3, 4)
+┌────────┬─────┬──────┬──────┐
+│ d      ┆ a   ┆ b    ┆ c    │
+│ ---    ┆ --- ┆ ---  ┆ ---  │
+│ str    ┆ i64 ┆ f64  ┆ bool │
+╞════════╪═════╪══════╪══════╡
+│ Apple  ┆ 3   ┆ 10.0 ┆ true │
+│ Orange ┆ 2   ┆ 0.5  ┆ true │
+│ Banana ┆ 5   ┆ 14.0 ┆ true │
+└────────┴─────┴──────┴──────┘
+```
+
+##### mean { #group_by.GroupBy.mean }
+
+`GroupBy.mean()`
+
+Reduce the groups to the mean values.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).mean()
+shape: (3, 4)
+┌────────┬─────┬──────────┬──────────┐
+│ d      ┆ a   ┆ b        ┆ c        │
+│ ---    ┆ --- ┆ ---      ┆ ---      │
+│ str    ┆ f64 ┆ f64      ┆ f64      │
+╞════════╪═════╪══════════╪══════════╡
+│ Apple  ┆ 2.0 ┆ 4.833333 ┆ 0.666667 │
+│ Orange ┆ 2.0 ┆ 0.5      ┆ 1.0      │
+│ Banana ┆ 4.5 ┆ 13.5     ┆ 0.5      │
+└────────┴─────┴──────────┴──────────┘
+```
+
+##### median { #group_by.GroupBy.median }
+
+`GroupBy.median()`
+
+Return the median per group.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "d": ["Apple", "Banana", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).median()
+shape: (2, 3)
+┌────────┬─────┬──────┐
+│ d      ┆ a   ┆ b    │
+│ ---    ┆ --- ┆ ---  │
+│ str    ┆ f64 ┆ f64  │
+╞════════╪═════╪══════╡
+│ Apple  ┆ 2.0 ┆ 4.0  │
+│ Banana ┆ 4.0 ┆ 13.0 │
+└────────┴─────┴──────┘
+```
+
+##### min { #group_by.GroupBy.min }
+
+`GroupBy.min()`
+
+Reduce the groups to the minimal value.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).min()
+shape: (3, 4)
+┌────────┬─────┬──────┬───────┐
+│ d      ┆ a   ┆ b    ┆ c     │
+│ ---    ┆ --- ┆ ---  ┆ ---   │
+│ str    ┆ i64 ┆ f64  ┆ bool  │
+╞════════╪═════╪══════╪═══════╡
+│ Apple  ┆ 1   ┆ 0.5  ┆ false │
+│ Orange ┆ 2   ┆ 0.5  ┆ true  │
+│ Banana ┆ 4   ┆ 13.0 ┆ false │
+└────────┴─────┴──────┴───────┘
+```
+
+##### n_unique { #group_by.GroupBy.n_unique }
+
+`GroupBy.n_unique()`
+
+Count the unique values per group.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 1, 3, 4, 5],
+...         "b": [0.5, 0.5, 0.5, 10, 13, 14],
+...         "d": ["Apple", "Banana", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).n_unique()
+shape: (2, 3)
+┌────────┬─────┬─────┐
+│ d      ┆ a   ┆ b   │
+│ ---    ┆ --- ┆ --- │
+│ str    ┆ u32 ┆ u32 │
+╞════════╪═════╪═════╡
+│ Apple  ┆ 2   ┆ 2   │
+│ Banana ┆ 3   ┆ 3   │
+└────────┴─────┴─────┘
+```
+
+##### quantile { #group_by.GroupBy.quantile }
+
+`GroupBy.quantile(quantile, interpolation='nearest')`
+
+Compute the quantile per group.
+
+###### Parameters
+
+| Name            | Type                                                 | Description                   | Default     |
+|-----------------|------------------------------------------------------|-------------------------------|-------------|
+| `quantile`      | float                                                | Quantile between 0.0 and 1.0. | _required_  |
+| `interpolation` | ('nearest', 'higher', 'lower', 'midpoint', 'linear') | Interpolation method.         | `'nearest'` |
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).quantile(1)
+shape: (3, 3)
+┌────────┬─────┬──────┐
+│ d      ┆ a   ┆ b    │
+│ ---    ┆ --- ┆ ---  │
+│ str    ┆ f64 ┆ f64  │
+╞════════╪═════╪══════╡
+│ Apple  ┆ 3.0 ┆ 10.0 │
+│ Orange ┆ 2.0 ┆ 0.5  │
+│ Banana ┆ 5.0 ┆ 14.0 │
+└────────┴─────┴──────┘
+```
+
+##### sum { #group_by.GroupBy.sum }
+
+`GroupBy.sum()`
+
+Reduce the groups to the sum.
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 2, 3, 4, 5],
+...         "b": [0.5, 0.5, 4, 10, 13, 14],
+...         "c": [True, True, True, False, False, True],
+...         "d": ["Apple", "Orange", "Apple", "Apple", "Banana", "Banana"],
+...     }
+... )
+>>> df.group_by("d", maintain_order=True).sum()
+shape: (3, 4)
+┌────────┬─────┬──────┬─────┐
+│ d      ┆ a   ┆ b    ┆ c   │
+│ ---    ┆ --- ┆ ---  ┆ --- │
+│ str    ┆ i64 ┆ f64  ┆ u32 │
+╞════════╪═════╪══════╪═════╡
+│ Apple  ┆ 6   ┆ 14.5 ┆ 2   │
+│ Orange ┆ 2   ┆ 0.5  ┆ 1   │
+│ Banana ┆ 9   ┆ 27.0 ┆ 1   │
+└────────┴─────┴──────┴─────┘
+```
+
+##### tail { #group_by.GroupBy.tail }
+
+`GroupBy.tail(n=5)`
+
+Get the last `n` rows of each group.
+
+###### Parameters
+
+| Name   | Type   | Description               | Default   |
+|--------|--------|---------------------------|-----------|
+| `n`    | int    | Number of rows to return. | `5`       |
+
+###### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "letters": ["c", "c", "a", "c", "a", "b"],
+...         "nrs": [1, 2, 3, 4, 5, 6],
+...     }
+... )
+>>> df
+shape: (6, 2)
+┌─────────┬─────┐
+│ letters ┆ nrs │
+│ ---     ┆ --- │
+│ str     ┆ i64 │
+╞═════════╪═════╡
+│ c       ┆ 1   │
+│ c       ┆ 2   │
+│ a       ┆ 3   │
+│ c       ┆ 4   │
+│ a       ┆ 5   │
+│ b       ┆ 6   │
+└─────────┴─────┘
+>>> df.group_by("letters").tail(2).sort("letters")
+shape: (5, 2)
+┌─────────┬─────┐
+│ letters ┆ nrs │
+│ ---     ┆ --- │
+│ str     ┆ i64 │
+╞═════════╪═════╡
+│ a       ┆ 3   │
+│ a       ┆ 5   │
+│ b       ┆ 6   │
+│ c       ┆ 2   │
+│ c       ┆ 4   │
+└─────────┴─────┘
+```
+
+### RollingGroupBy { #group_by.RollingGroupBy }
+
+`RollingGroupBy(self, df, index_column, *, period, offset, closed, group_by)`
+
+A rolling grouper.
+
+This has an `.agg` method which will allow you to run all polars expressions in a
+group by context.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [agg](#group_by.RollingGroupBy.agg) | Compute aggregations for each group of a group by operation. |
+| [map_groups](#group_by.RollingGroupBy.map_groups) | Apply a custom/user-defined function (UDF) over the groups as a new DataFrame. |
+
+##### agg { #group_by.RollingGroupBy.agg }
+
+`RollingGroupBy.agg(*aggs, **named_aggs)`
+
+Compute aggregations for each group of a group by operation.
+
+###### Parameters
+
+| Name           | Type                             | Description                                                                                                                                                        | Default   |
+|----------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `*aggs`        | IntoExpr \| Iterable\[IntoExpr\] | Aggregations to compute for each group of the group by operation, specified as positional arguments. Accepts expression input. Strings are parsed as column names. | `()`      |
+| `**named_aggs` | IntoExpr                         | Additional aggregations, specified as keyword arguments. The resulting columns will be renamed to the keyword used.                                                | `{}`      |
+
+##### map_groups { #group_by.RollingGroupBy.map_groups }
+
+`RollingGroupBy.map_groups(function, schema)`
+
+Apply a custom/user-defined function (UDF) over the groups as a new DataFrame.
+
+Using this is considered an anti-pattern as it will be very slow because:
+
+- it forces the engine to materialize the whole `DataFrames` for the groups.
+- it is not parallelized.
+- it blocks optimizations as the passed python function is opaque to the
+  optimizer.
+
+The idiomatic way to apply custom functions over multiple columns is using:
+
+`pl.struct([my_columns]).map_elements(lambda struct_series: ..)`
+
+###### Parameters
+
+| Name       | Type                                 | Description                                                                                                                                                                                                           | Default    |
+|------------|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `function` | Callable\[\[DataFrame\], DataFrame\] | Function to apply over each group of the `LazyFrame`; it receives a DataFrame and should return a DataFrame.                                                                                                          | _required_ |
+| `schema`   | SchemaDict \| None                   | Schema of the output function. This has to be known statically. If the given schema is incorrect, this is a bug in the caller's query and may lead to errors. If set to None, polars assumes the schema is unchanged. | _required_ |

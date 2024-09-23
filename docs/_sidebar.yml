@@ -1,0 +1,13 @@
+website:
+  sidebar:
+  - contents:
+    - notebooks/index.qmd
+    - contents:
+      - notebooks/functions.qmd
+      - notebooks/group_by.qmd
+      section: Main Functions
+    - contents:
+      - notebooks/script.qmd
+      section: Notebooks
+    id: notebooks
+  - id: dummy-sidebar

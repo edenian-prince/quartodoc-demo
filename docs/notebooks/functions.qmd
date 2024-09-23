@@ -1,0 +1,1875 @@
+# functions { #functions }
+
+``
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [approx_n_unique](#functions.approx_n_unique) | Approximate count of unique values. |
+| [arctan2](#functions.arctan2) | Compute two argument arctan in radians. |
+| [arctan2d](#functions.arctan2d) | Compute two argument arctan in degrees. |
+| [arg_sort_by](#functions.arg_sort_by) | Return the row indices that would sort the column(s). |
+| [arg_where](#functions.arg_where) | Return indices where `condition` evaluates `True`. |
+| [coalesce](#functions.coalesce) | Folds the columns from left to right, keeping the first non-null value. |
+| [collect_all](#functions.collect_all) | Collect multiple LazyFrames at the same time. |
+| [collect_all_async](#functions.collect_all_async) | Collect multiple LazyFrames at the same time asynchronously in thread pool. |
+| [corr](#functions.corr) | Compute the Pearson's or Spearman rank correlation correlation between two columns. |
+| [count](#functions.count) | Return the number of non-null values in the column. |
+| [cov](#functions.cov) | Compute the covariance between two columns/ expressions. |
+| [cum_count](#functions.cum_count) | Return the cumulative count of the non-null values in the column. |
+| [cum_fold](#functions.cum_fold) | Cumulatively fold horizontally across columns with a left fold. |
+| [cum_reduce](#functions.cum_reduce) | Cumulatively reduce horizontally across columns with a left fold. |
+| [element](#functions.element) | Alias for an element being evaluated in an `eval` expression. |
+| [exclude](#functions.exclude) | Represent all columns except for the given columns. |
+| [field](#functions.field) | Select a field in the current `struct.with_fields` scope. |
+| [first](#functions.first) | Get the first column or value. |
+| [fold](#functions.fold) | Accumulate over multiple columns horizontally/ row wise with a left fold. |
+| [from_epoch](#functions.from_epoch) | Utility function that parses an epoch timestamp (or Unix time) to Polars Date(time). |
+| [groups](#functions.groups) | Syntactic sugar for `pl.col("foo").agg_groups()`. |
+| [head](#functions.head) | Get the first `n` rows. |
+| [implode](#functions.implode) | Aggregate all column values into a list. |
+| [last](#functions.last) | Get the last column or value. |
+| [map_batches](#functions.map_batches) | Map a custom function over multiple columns/expressions. |
+| [map_groups](#functions.map_groups) | Apply a custom/user-defined function (UDF) in a GroupBy context. |
+| [mean](#functions.mean) | Get the mean value. |
+| [median](#functions.median) | Get the median value. |
+| [n_unique](#functions.n_unique) | Count unique values. |
+| [nth](#functions.nth) | Get the nth column(s) of the context. |
+| [quantile](#functions.quantile) | Syntactic sugar for `pl.col("foo").quantile(..)`. |
+| [reduce](#functions.reduce) | Accumulate over multiple columns horizontally/ row wise with a left fold. |
+| [rolling_corr](#functions.rolling_corr) | Compute the rolling correlation between two columns/ expressions. |
+| [rolling_cov](#functions.rolling_cov) | Compute the rolling covariance between two columns/ expressions. |
+| [select](#functions.select) | Run polars expressions without a context. |
+| [sql_expr](#functions.sql_expr) | Parse one or more SQL expressions to Polars expression(s). |
+| [std](#functions.std) | Get the standard deviation. |
+| [tail](#functions.tail) | Get the last `n` rows. |
+| [var](#functions.var) | Get the variance. |
+
+### approx_n_unique { #functions.approx_n_unique }
+
+`approx_n_unique(*columns)`
+
+Approximate count of unique values.
+
+This function is syntactic sugar for `pl.col(columns).approx_n_unique()`, and
+uses the HyperLogLog++ algorithm for cardinality estimation.
+
+#### Parameters
+
+| Name      | Type   | Description               | Default   |
+|-----------|--------|---------------------------|-----------|
+| `columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 1],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.approx_n_unique("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 2   │
+└─────┘
+>>> df.select(pl.approx_n_unique("b", "c"))
+shape: (1, 2)
+┌─────┬─────┐
+│ b   ┆ c   │
+│ --- ┆ --- │
+│ u32 ┆ u32 │
+╞═════╪═════╡
+│ 3   ┆ 2   │
+└─────┴─────┘
+```
+
+### arctan2 { #functions.arctan2 }
+
+`arctan2(y, x)`
+
+Compute two argument arctan in radians.
+
+Returns the angle (in radians) in the plane between the
+positive x-axis and the ray from the origin to (x,y).
+
+#### Parameters
+
+| Name   | Type        | Description                | Default    |
+|--------|-------------|----------------------------|------------|
+| `y`    | str \| Expr | Column name or Expression. | _required_ |
+| `x`    | str \| Expr | Column name or Expression. | _required_ |
+
+#### Examples
+
+```python
+>>> c = (2**0.5) / 2
+>>> df = pl.DataFrame(
+...     {
+...         "y": [c, -c, c, -c],
+...         "x": [c, c, -c, -c],
+...     }
+... )
+>>> df.with_columns(pl.arctan2("y", "x").alias("atan2"))
+shape: (4, 3)
+┌───────────┬───────────┬───────────┐
+│ y         ┆ x         ┆ atan2     │
+│ ---       ┆ ---       ┆ ---       │
+│ f64       ┆ f64       ┆ f64       │
+╞═══════════╪═══════════╪═══════════╡
+│ 0.707107  ┆ 0.707107  ┆ 0.785398  │
+│ -0.707107 ┆ 0.707107  ┆ -0.785398 │
+│ 0.707107  ┆ -0.707107 ┆ 2.356194  │
+│ -0.707107 ┆ -0.707107 ┆ -2.356194 │
+└───────────┴───────────┴───────────┘
+```
+
+### arctan2d { #functions.arctan2d }
+
+`arctan2d(y, x)`
+
+Compute two argument arctan in degrees.
+
+.. deprecated:: 1.0.0
+    Use `arctan2` followed by :meth:`Expr.degrees` instead.
+
+Returns the angle (in degrees) in the plane between the positive x-axis
+and the ray from the origin to (x,y).
+
+#### Parameters
+
+| Name   | Type        | Description                | Default    |
+|--------|-------------|----------------------------|------------|
+| `y`    | str \| Expr | Column name or Expression. | _required_ |
+| `x`    | str \| Expr | Column name or Expression. | _required_ |
+
+#### Examples
+
+```python
+>>> c = (2**0.5) / 2
+>>> df = pl.DataFrame(
+...     {
+...         "y": [c, -c, c, -c],
+...         "x": [c, c, -c, -c],
+...     }
+... )
+>>> df.select(
+...     pl.arctan2d("y", "x").alias("atan2d"),
+...     pl.arctan2("y", "x").alias("atan2"),
+... )
+shape: (4, 2)
+┌────────┬───────────┐
+│ atan2d ┆ atan2     │
+│ ---    ┆ ---       │
+│ f64    ┆ f64       │
+╞════════╪═══════════╡
+│ 45.0   ┆ 0.785398  │
+│ -45.0  ┆ -0.785398 │
+│ 135.0  ┆ 2.356194  │
+│ -135.0 ┆ -2.356194 │
+└────────┴───────────┘
+```
+
+### arg_sort_by { #functions.arg_sort_by }
+
+`arg_sort_by(exprs, *more_exprs, descending=False, nulls_last=False, multithreaded=True, maintain_order=False)`
+
+Return the row indices that would sort the column(s).
+
+#### Parameters
+
+| Name             | Type                             | Description                                                                                                                | Default    |
+|------------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------|------------|
+| `exprs`          | IntoExpr \| Iterable\[IntoExpr\] | Column(s) to arg sort by. Accepts expression input. Strings are parsed as column names.                                    | _required_ |
+| `*more_exprs`    | IntoExpr                         | Additional columns to arg sort by, specified as positional arguments.                                                      | `()`       |
+| `descending`     | bool \| Sequence\[bool\]         | Sort in descending order. When sorting by multiple columns, can be specified per column by passing a sequence of booleans. | `False`    |
+| `nulls_last`     | bool \| Sequence\[bool\]         | Place null values last.                                                                                                    | `False`    |
+| `multithreaded`  | bool                             | Sort using multiple threads.                                                                                               | `True`     |
+| `maintain_order` | bool                             | Whether the order should be maintained if elements are equal.                                                              | `False`    |
+
+#### See Also
+
+Expr.gather: Take values by index.
+Expr.rank : Get the rank of each row.
+
+#### Examples
+
+Pass a single column name to compute the arg sort by that column.
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [0, 1, 1, 0],
+...         "b": [3, 2, 3, 2],
+...         "c": [1, 2, 3, 4],
+...     }
+... )
+>>> df.select(pl.arg_sort_by("a"))
+shape: (4, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 0   │
+│ 3   │
+│ 1   │
+│ 2   │
+└─────┘
+```
+
+Compute the arg sort by multiple columns by either passing a list of columns, or by
+specifying each column as a positional argument.
+
+```python
+>>> df.select(pl.arg_sort_by(["a", "b"], descending=True))
+shape: (4, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 2   │
+│ 1   │
+│ 0   │
+│ 3   │
+└─────┘
+```
+
+Use gather to apply the arg sort to other columns.
+
+```python
+>>> df.select(pl.col("c").gather(pl.arg_sort_by("a")))
+shape: (4, 1)
+┌─────┐
+│ c   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 4   │
+│ 2   │
+│ 3   │
+└─────┘
+```
+
+### arg_where { #functions.arg_where }
+
+`arg_where(condition, *, eager=False)`
+
+Return indices where `condition` evaluates `True`.
+
+#### Parameters
+
+| Name        | Type           | Description                                                                                            | Default    |
+|-------------|----------------|--------------------------------------------------------------------------------------------------------|------------|
+| `condition` | Expr \| Series | Boolean expression to evaluate                                                                         | _required_ |
+| `eager`     | bool           | Evaluate immediately and return a `Series`. If set to `False` (default), return an expression instead. | `False`    |
+
+#### See Also
+
+Series.arg_true : Return indices where Series is True
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame({"a": [1, 2, 3, 4, 5]})
+>>> df.select(
+...     [
+...         pl.arg_where(pl.col("a") % 2 == 0),
+...     ]
+... ).to_series()
+shape: (2,)
+Series: 'a' [u32]
+[
+    1
+    3
+]
+```
+
+### coalesce { #functions.coalesce }
+
+`coalesce(exprs, *more_exprs)`
+
+Folds the columns from left to right, keeping the first non-null value.
+
+#### Parameters
+
+| Name          | Type                             | Description                                                                                                                            | Default    |
+|---------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `exprs`       | IntoExpr \| Iterable\[IntoExpr\] | Columns to coalesce. Accepts expression input. Strings are parsed as column names, other non-expression inputs are parsed as literals. | _required_ |
+| `*more_exprs` | IntoExpr                         | Additional columns to coalesce, specified as positional arguments.                                                                     | `()`       |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, None, None, None],
+...         "b": [1, 2, None, None],
+...         "c": [5, None, 3, None],
+...     }
+... )
+>>> df.with_columns(pl.coalesce(["a", "b", "c", 10]).alias("d"))
+shape: (4, 4)
+┌──────┬──────┬──────┬─────┐
+│ a    ┆ b    ┆ c    ┆ d   │
+│ ---  ┆ ---  ┆ ---  ┆ --- │
+│ i64  ┆ i64  ┆ i64  ┆ i64 │
+╞══════╪══════╪══════╪═════╡
+│ 1    ┆ 1    ┆ 5    ┆ 1   │
+│ null ┆ 2    ┆ null ┆ 2   │
+│ null ┆ null ┆ 3    ┆ 3   │
+│ null ┆ null ┆ null ┆ 10  │
+└──────┴──────┴──────┴─────┘
+>>> df.with_columns(pl.coalesce(pl.col(["a", "b", "c"]), 10.0).alias("d"))
+shape: (4, 4)
+┌──────┬──────┬──────┬──────┐
+│ a    ┆ b    ┆ c    ┆ d    │
+│ ---  ┆ ---  ┆ ---  ┆ ---  │
+│ i64  ┆ i64  ┆ i64  ┆ f64  │
+╞══════╪══════╪══════╪══════╡
+│ 1    ┆ 1    ┆ 5    ┆ 1.0  │
+│ null ┆ 2    ┆ null ┆ 2.0  │
+│ null ┆ null ┆ 3    ┆ 3.0  │
+│ null ┆ null ┆ null ┆ 10.0 │
+└──────┴──────┴──────┴──────┘
+```
+
+### collect_all { #functions.collect_all }
+
+`collect_all(lazy_frames, *, type_coercion=True, predicate_pushdown=True, projection_pushdown=True, simplify_expression=True, no_optimization=False, slice_pushdown=True, comm_subplan_elim=True, comm_subexpr_elim=True, cluster_with_columns=True, streaming=False)`
+
+Collect multiple LazyFrames at the same time.
+
+This runs all the computation graphs in parallel on the Polars threadpool.
+
+#### Parameters
+
+| Name                   | Type                  | Description                                                                                                                                                                                                                                                                                                                                                                                   | Default    |
+|------------------------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `lazy_frames`          | Iterable\[LazyFrame\] | A list of LazyFrames to collect.                                                                                                                                                                                                                                                                                                                                                              | _required_ |
+| `type_coercion`        | bool                  | Do type coercion optimization.                                                                                                                                                                                                                                                                                                                                                                | `True`     |
+| `predicate_pushdown`   | bool                  | Do predicate pushdown optimization.                                                                                                                                                                                                                                                                                                                                                           | `True`     |
+| `projection_pushdown`  | bool                  | Do projection pushdown optimization.                                                                                                                                                                                                                                                                                                                                                          | `True`     |
+| `simplify_expression`  | bool                  | Run simplify expressions optimization.                                                                                                                                                                                                                                                                                                                                                        | `True`     |
+| `no_optimization`      | bool                  | Turn off optimizations.                                                                                                                                                                                                                                                                                                                                                                       | `False`    |
+| `slice_pushdown`       | bool                  | Slice pushdown optimization.                                                                                                                                                                                                                                                                                                                                                                  | `True`     |
+| `comm_subplan_elim`    | bool                  | Will try to cache branching subplans that occur on self-joins or unions.                                                                                                                                                                                                                                                                                                                      | `True`     |
+| `comm_subexpr_elim`    | bool                  | Common subexpressions will be cached and reused.                                                                                                                                                                                                                                                                                                                                              | `True`     |
+| `cluster_with_columns` | bool                  | Combine sequential independent calls to with_columns                                                                                                                                                                                                                                                                                                                                          | `True`     |
+| `streaming`            | bool                  | Process the query in batches to handle larger-than-memory data. If set to `False` (default), the entire query is processed in a single batch.  .. warning::     Streaming mode is considered **unstable**. It may be changed     at any point without it being considered a breaking change.  .. note::     Use :func:`explain` to see if Polars can process the query in streaming     mode. | `False`    |
+
+#### Returns
+
+| Type               | Description                                                                   |
+|--------------------|-------------------------------------------------------------------------------|
+| list of DataFrames | The collected DataFrames, returned in the same order as the input LazyFrames. |
+
+### collect_all_async { #functions.collect_all_async }
+
+`collect_all_async(lazy_frames, *, gevent=False, type_coercion=True, predicate_pushdown=True, projection_pushdown=True, simplify_expression=True, no_optimization=False, slice_pushdown=True, comm_subplan_elim=True, comm_subexpr_elim=True, cluster_with_columns=True, streaming=False)`
+
+Collect multiple LazyFrames at the same time asynchronously in thread pool.
+
+.. warning::
+    This functionality is considered **unstable**. It may be changed
+    at any point without it being considered a breaking change.
+
+Collects into a list of DataFrame (like :func:`polars.collect_all`),
+but instead of returning them directly, they are scheduled to be collected
+inside thread pool, while this method returns almost instantly.
+
+May be useful if you use gevent or asyncio and want to release control to other
+greenlets/tasks while LazyFrames are being collected.
+
+#### Parameters
+
+| Name                   | Type                  | Description                                                                                                                                                                                                                                                                                                                                                                                   | Default    |
+|------------------------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `lazy_frames`          | Iterable\[LazyFrame\] | A list of LazyFrames to collect.                                                                                                                                                                                                                                                                                                                                                              | _required_ |
+| `gevent`               | bool                  | Return wrapper to `gevent.event.AsyncResult` instead of Awaitable                                                                                                                                                                                                                                                                                                                             | `False`    |
+| `type_coercion`        | bool                  | Do type coercion optimization.                                                                                                                                                                                                                                                                                                                                                                | `True`     |
+| `predicate_pushdown`   | bool                  | Do predicate pushdown optimization.                                                                                                                                                                                                                                                                                                                                                           | `True`     |
+| `projection_pushdown`  | bool                  | Do projection pushdown optimization.                                                                                                                                                                                                                                                                                                                                                          | `True`     |
+| `simplify_expression`  | bool                  | Run simplify expressions optimization.                                                                                                                                                                                                                                                                                                                                                        | `True`     |
+| `no_optimization`      | bool                  | Turn off (certain) optimizations.                                                                                                                                                                                                                                                                                                                                                             | `False`    |
+| `slice_pushdown`       | bool                  | Slice pushdown optimization.                                                                                                                                                                                                                                                                                                                                                                  | `True`     |
+| `comm_subplan_elim`    | bool                  | Will try to cache branching subplans that occur on self-joins or unions.                                                                                                                                                                                                                                                                                                                      | `True`     |
+| `comm_subexpr_elim`    | bool                  | Common subexpressions will be cached and reused.                                                                                                                                                                                                                                                                                                                                              | `True`     |
+| `cluster_with_columns` | bool                  | Combine sequential independent calls to with_columns                                                                                                                                                                                                                                                                                                                                          | `True`     |
+| `streaming`            | bool                  | Process the query in batches to handle larger-than-memory data. If set to `False` (default), the entire query is processed in a single batch.  .. warning::     Streaming mode is considered **unstable**. It may be changed     at any point without it being considered a breaking change.  .. note::     Use :func:`explain` to see if Polars can process the query in streaming     mode. | `False`    |
+
+#### See Also
+
+polars.collect_all : Collect multiple LazyFrames at the same time.
+LazyFrame.collect_async : To collect single frame.
+
+#### Notes
+
+In case of error `set_exception` is used on
+`asyncio.Future`/`gevent.event.AsyncResult` and will be reraised by them.
+
+#### Returns
+
+| Type                                                | Description   |
+|-----------------------------------------------------|---------------|
+| If `gevent=False` (default) then returns awaitable. |               |
+| If `gevent=True` then returns wrapper that has      |               |
+| `.get(block=True, timeout=None)` method.            |               |
+
+### corr { #functions.corr }
+
+`corr(a, b, *, method='pearson', ddof=1, propagate_nans=False)`
+
+Compute the Pearson's or Spearman rank correlation correlation between two columns.
+
+#### Parameters
+
+| Name             | Type                    | Description                                                                                                                                                                        | Default     |
+|------------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| `a`              | IntoExpr                | Column name or Expression.                                                                                                                                                         | _required_  |
+| `b`              | IntoExpr                | Column name or Expression.                                                                                                                                                         | _required_  |
+| `ddof`           | int                     | "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof, where N represents the number of elements. By default ddof is 1.                                      | `1`         |
+| `method`         | ('pearson', 'spearman') | Correlation method.                                                                                                                                                                | `'pearson'` |
+| `propagate_nans` | bool                    | If `True` any `NaN` encountered will lead to `NaN` in the output. Defaults to `False` where `NaN` are regarded as larger than any finite number and thus lead to the highest rank. | `False`     |
+
+#### Examples
+
+Pearson's correlation:
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.corr("a", "b"))
+shape: (1, 1)
+┌──────────┐
+│ a        │
+│ ---      │
+│ f64      │
+╞══════════╡
+│ 0.544705 │
+└──────────┘
+```
+
+Spearman rank correlation:
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.corr("a", "b", method="spearman"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ f64 │
+╞═════╡
+│ 0.5 │
+└─────┘
+```
+
+### count { #functions.count }
+
+`count(*columns)`
+
+Return the number of non-null values in the column.
+
+This function is syntactic sugar for `col(columns).count()`.
+
+Calling this function without any arguments returns the number of rows in the
+context. **This way of using the function is deprecated.** Please use :func:`len`
+instead.
+
+#### Parameters
+
+| Name       | Type   | Description               | Default   |
+|------------|--------|---------------------------|-----------|
+| `*columns` | str    | One or more column names. | `()`      |
+
+#### Returns
+
+| Type   | Description                              |
+|--------|------------------------------------------|
+| Expr   | Expression of data type :class:`UInt32`. |
+
+#### See Also
+
+Expr.count
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, None],
+...         "b": [3, None, None],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.count("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 2   │
+└─────┘
+```
+
+Return the number of non-null values in multiple columns.
+
+```python
+>>> df.select(pl.count("b", "c"))
+shape: (1, 2)
+┌─────┬─────┐
+│ b   ┆ c   │
+│ --- ┆ --- │
+│ u32 ┆ u32 │
+╞═════╪═════╡
+│ 1   ┆ 3   │
+└─────┴─────┘
+```
+
+Return the number of rows in a context. **This way of using the function is
+deprecated.** Please use :func:`len` instead.
+
+```python
+>>> df.select(pl.count())
+shape: (1, 1)
+┌───────┐
+│ count │
+│ ---   │
+│ u32   │
+╞═══════╡
+│ 3     │
+└───────┘
+```
+
+### cov { #functions.cov }
+
+`cov(a, b, ddof=1)`
+
+Compute the covariance between two columns/ expressions.
+
+#### Parameters
+
+| Name   | Type     | Description                                                                                                                                   | Default    |
+|--------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `a`    | IntoExpr | Column name or Expression.                                                                                                                    | _required_ |
+| `b`    | IntoExpr | Column name or Expression.                                                                                                                    | _required_ |
+| `ddof` | int      | "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof, where N represents the number of elements. By default ddof is 1. | `1`        |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     },
+... )
+>>> df.select(pl.cov("a", "b"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ f64 │
+╞═════╡
+│ 3.0 │
+└─────┘
+```
+
+### cum_count { #functions.cum_count }
+
+`cum_count(*columns, reverse=False)`
+
+Return the cumulative count of the non-null values in the column.
+
+This function is syntactic sugar for `col(columns).cum_count()`.
+
+#### Parameters
+
+| Name       | Type   | Description                    | Default   |
+|------------|--------|--------------------------------|-----------|
+| `*columns` | str    | Name(s) of the columns to use. | `()`      |
+| `reverse`  | bool   | Reverse the operation.         | `False`   |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame({"a": [1, 2, None], "b": [3, None, None]})
+>>> df.select(pl.cum_count("a"))
+shape: (3, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 1   │
+│ 2   │
+│ 2   │
+└─────┘
+```
+
+### cum_fold { #functions.cum_fold }
+
+`cum_fold(acc, function, exprs, *, include_init=False)`
+
+Cumulatively fold horizontally across columns with a left fold.
+
+Every cumulative result is added as a separate field in a Struct column.
+
+#### Parameters
+
+| Name           | Type                                   | Description                                                                                                                           | Default    |
+|----------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `acc`          | IntoExpr                               | Accumulator expression. This is the value that will be initialized when the fold starts. For a sum this could for instance be lit(0). | _required_ |
+| `function`     | Callable\[\[Series, Series\], Series\] | Function to apply over the accumulator and the value. Fn(acc, value) -> new_value                                                     | _required_ |
+| `exprs`        | Sequence\[Expr \| str\] \| Expr        | Expressions to aggregate over. May also be a wildcard expression.                                                                     | _required_ |
+| `include_init` | bool                                   | Include the initial accumulator state as struct field.                                                                                | `False`    |
+
+#### Notes
+
+If you simply want the first encountered expression as accumulator,
+consider using :func:`cum_reduce`.
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [3, 4, 5],
+...         "c": [5, 6, 7],
+...     }
+... )
+>>> df.with_columns(
+...     pl.cum_fold(acc=pl.lit(1), function=lambda acc, x: acc + x, exprs=pl.all())
+... )
+shape: (3, 4)
+┌─────┬─────┬─────┬───────────┐
+│ a   ┆ b   ┆ c   ┆ cum_fold  │
+│ --- ┆ --- ┆ --- ┆ ---       │
+│ i64 ┆ i64 ┆ i64 ┆ struct[3] │
+╞═════╪═════╪═════╪═══════════╡
+│ 1   ┆ 3   ┆ 5   ┆ {2,5,10}  │
+│ 2   ┆ 4   ┆ 6   ┆ {3,7,13}  │
+│ 3   ┆ 5   ┆ 7   ┆ {4,9,16}  │
+└─────┴─────┴─────┴───────────┘
+```
+
+### cum_reduce { #functions.cum_reduce }
+
+`cum_reduce(function, exprs)`
+
+Cumulatively reduce horizontally across columns with a left fold.
+
+Every cumulative result is added as a separate field in a Struct column.
+
+#### Parameters
+
+| Name       | Type                                   | Description                                                                       | Default    |
+|------------|----------------------------------------|-----------------------------------------------------------------------------------|------------|
+| `function` | Callable\[\[Series, Series\], Series\] | Function to apply over the accumulator and the value. Fn(acc, value) -> new_value | _required_ |
+| `exprs`    | Sequence\[Expr \| str\] \| Expr        | Expressions to aggregate over. May also be a wildcard expression.                 | _required_ |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [3, 4, 5],
+...         "c": [5, 6, 7],
+...     }
+... )
+>>> df.with_columns(pl.cum_reduce(function=lambda acc, x: acc + x, exprs=pl.all()))
+shape: (3, 4)
+┌─────┬─────┬─────┬────────────┐
+│ a   ┆ b   ┆ c   ┆ cum_reduce │
+│ --- ┆ --- ┆ --- ┆ ---        │
+│ i64 ┆ i64 ┆ i64 ┆ struct[3]  │
+╞═════╪═════╪═════╪════════════╡
+│ 1   ┆ 3   ┆ 5   ┆ {1,4,9}    │
+│ 2   ┆ 4   ┆ 6   ┆ {2,6,12}   │
+│ 3   ┆ 5   ┆ 7   ┆ {3,8,15}   │
+└─────┴─────┴─────┴────────────┘
+```
+
+### element { #functions.element }
+
+`element()`
+
+Alias for an element being evaluated in an `eval` expression.
+
+#### Examples
+
+A horizontal rank computation by taking the elements of a list
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...     }
+... )
+>>> df.with_columns(
+...     pl.concat_list(["a", "b"]).list.eval(pl.element().rank()).alias("rank")
+... )
+shape: (3, 3)
+┌─────┬─────┬────────────┐
+│ a   ┆ b   ┆ rank       │
+│ --- ┆ --- ┆ ---        │
+│ i64 ┆ i64 ┆ list[f64]  │
+╞═════╪═════╪════════════╡
+│ 1   ┆ 4   ┆ [1.0, 2.0] │
+│ 8   ┆ 5   ┆ [2.0, 1.0] │
+│ 3   ┆ 2   ┆ [2.0, 1.0] │
+└─────┴─────┴────────────┘
+```
+
+A mathematical operation on array elements
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...     }
+... )
+>>> df.with_columns(
+...     pl.concat_list(["a", "b"]).list.eval(pl.element() * 2).alias("a_b_doubled")
+... )
+shape: (3, 3)
+┌─────┬─────┬─────────────┐
+│ a   ┆ b   ┆ a_b_doubled │
+│ --- ┆ --- ┆ ---         │
+│ i64 ┆ i64 ┆ list[i64]   │
+╞═════╪═════╪═════════════╡
+│ 1   ┆ 4   ┆ [2, 8]      │
+│ 8   ┆ 5   ┆ [16, 10]    │
+│ 3   ┆ 2   ┆ [6, 4]      │
+└─────┴─────┴─────────────┘
+```
+
+### exclude { #functions.exclude }
+
+`exclude(columns, *more_columns)`
+
+Represent all columns except for the given columns.
+
+Syntactic sugar for `pl.all().exclude(columns)`.
+
+#### Parameters
+
+| Name            | Type                                                                       | Description                                                                                                                                     | Default    |
+|-----------------|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `columns`       | str \| PolarsDataType \| Collection\[str\] \| Collection\[PolarsDataType\] | The name or datatype of the column(s) to exclude. Accepts regular expression input. Regular expressions should start with `^` and end with `$`. | _required_ |
+| `*more_columns` | str \| PolarsDataType                                                      | Additional names or datatypes of columns to exclude, specified as positional arguments.                                                         | `()`       |
+
+#### Examples
+
+Exclude by column name(s):
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "aa": [1, 2, 3],
+...         "ba": ["a", "b", None],
+...         "cc": [None, 2.5, 1.5],
+...     }
+... )
+>>> df.select(pl.exclude("ba"))
+shape: (3, 2)
+┌─────┬──────┐
+│ aa  ┆ cc   │
+│ --- ┆ ---  │
+│ i64 ┆ f64  │
+╞═════╪══════╡
+│ 1   ┆ null │
+│ 2   ┆ 2.5  │
+│ 3   ┆ 1.5  │
+└─────┴──────┘
+```
+
+Exclude by regex, e.g. removing all columns whose names end with the letter "a":
+
+```python
+>>> df.select(pl.exclude("^.*a$"))
+shape: (3, 1)
+┌──────┐
+│ cc   │
+│ ---  │
+│ f64  │
+╞══════╡
+│ null │
+│ 2.5  │
+│ 1.5  │
+└──────┘
+```
+
+Exclude by dtype(s), e.g. removing all columns of type Int64 or Float64:
+
+```python
+>>> df.select(pl.exclude([pl.Int64, pl.Float64]))
+shape: (3, 1)
+┌──────┐
+│ ba   │
+│ ---  │
+│ str  │
+╞══════╡
+│ a    │
+│ b    │
+│ null │
+└──────┘
+```
+
+### field { #functions.field }
+
+`field(name)`
+
+Select a field in the current `struct.with_fields` scope.
+
+name
+    Name of the field(s) to select.
+
+### first { #functions.first }
+
+`first(*columns)`
+
+Get the first column or value.
+
+This function has different behavior depending on the presence of `columns`
+values. If none given (the default), returns an expression that takes the first
+column of the context; otherwise, takes the first value of the given column(s).
+
+#### Parameters
+
+| Name       | Type   | Description               | Default   |
+|------------|--------|---------------------------|-----------|
+| `*columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "baz"],
+...     }
+... )
+```
+
+Return the first column:
+
+```python
+>>> df.select(pl.first())
+shape: (3, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 8   │
+│ 3   │
+└─────┘
+```
+
+Return the first value for the given column(s):
+
+```python
+>>> df.select(pl.first("b"))
+shape: (1, 1)
+┌─────┐
+│ b   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 4   │
+└─────┘
+>>> df.select(pl.first("a", "c"))
+shape: (1, 2)
+┌─────┬─────┐
+│ a   ┆ c   │
+│ --- ┆ --- │
+│ i64 ┆ str │
+╞═════╪═════╡
+│ 1   ┆ foo │
+└─────┴─────┘
+```
+
+### fold { #functions.fold }
+
+`fold(acc, function, exprs)`
+
+Accumulate over multiple columns horizontally/ row wise with a left fold.
+
+#### Parameters
+
+| Name       | Type                                   | Description                                                                                                                           | Default    |
+|------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `acc`      | IntoExpr                               | Accumulator Expression. This is the value that will be initialized when the fold starts. For a sum this could for instance be lit(0). | _required_ |
+| `function` | Callable\[\[Series, Series\], Series\] | Function to apply over the accumulator and the value. Fn(acc, value) -> new_value                                                     | _required_ |
+| `exprs`    | Sequence\[Expr \| str\] \| Expr        | Expressions to aggregate over. May also be a wildcard expression.                                                                     | _required_ |
+
+#### Notes
+
+If you simply want the first encountered expression as accumulator,
+consider using `reduce`.
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [3, 4, 5],
+...         "c": [5, 6, 7],
+...     }
+... )
+>>> df
+shape: (3, 3)
+┌─────┬─────┬─────┐
+│ a   ┆ b   ┆ c   │
+│ --- ┆ --- ┆ --- │
+│ i64 ┆ i64 ┆ i64 │
+╞═════╪═════╪═════╡
+│ 1   ┆ 3   ┆ 5   │
+│ 2   ┆ 4   ┆ 6   │
+│ 3   ┆ 5   ┆ 7   │
+└─────┴─────┴─────┘
+```
+
+Horizontally sum over all columns and add 1.
+
+```python
+>>> df.select(
+...     pl.fold(
+...         acc=pl.lit(1), function=lambda acc, x: acc + x, exprs=pl.col("*")
+...     ).alias("sum"),
+... )
+shape: (3, 1)
+┌─────┐
+│ sum │
+│ --- │
+│ i64 │
+╞═════╡
+│ 10  │
+│ 13  │
+│ 16  │
+└─────┘
+```
+
+You can also apply a condition/predicate on all columns:
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [0, 1, 2],
+...     }
+... )
+>>> df
+shape: (3, 2)
+┌─────┬─────┐
+│ a   ┆ b   │
+│ --- ┆ --- │
+│ i64 ┆ i64 │
+╞═════╪═════╡
+│ 1   ┆ 0   │
+│ 2   ┆ 1   │
+│ 3   ┆ 2   │
+└─────┴─────┘
+```
+
+```python
+>>> df.filter(
+...     pl.fold(
+...         acc=pl.lit(True),
+...         function=lambda acc, x: acc & x,
+...         exprs=pl.col("*") > 1,
+...     )
+... )
+shape: (1, 2)
+┌─────┬─────┐
+│ a   ┆ b   │
+│ --- ┆ --- │
+│ i64 ┆ i64 │
+╞═════╪═════╡
+│ 3   ┆ 2   │
+└─────┴─────┘
+```
+
+### from_epoch { #functions.from_epoch }
+
+`from_epoch(column, time_unit='s')`
+
+Utility function that parses an epoch timestamp (or Unix time) to Polars Date(time).
+
+Depending on the `time_unit` provided, this function will return a different dtype:
+
+- time_unit="d" returns pl.Date
+- time_unit="s" returns pl.Datetime["us"] (pl.Datetime's default)
+- time_unit="ms" returns pl.Datetime["ms"]
+- time_unit="us" returns pl.Datetime["us"]
+- time_unit="ns" returns pl.Datetime["ns"]
+
+#### Parameters
+
+| Name        | Type                                     | Description                                            | Default    |
+|-------------|------------------------------------------|--------------------------------------------------------|------------|
+| `column`    | str \| Expr \| Series \| Sequence\[int\] | Series or expression to parse integers to pl.Datetime. | _required_ |
+| `time_unit` | EpochTimeUnit                            | The unit of time of the timesteps since epoch time.    | `'s'`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame({"timestamp": [1666683077, 1666683099]}).lazy()
+>>> df.select(pl.from_epoch(pl.col("timestamp"), time_unit="s")).collect()
+shape: (2, 1)
+┌─────────────────────┐
+│ timestamp           │
+│ ---                 │
+│ datetime[μs]        │
+╞═════════════════════╡
+│ 2022-10-25 07:31:17 │
+│ 2022-10-25 07:31:39 │
+└─────────────────────┘
+```
+
+The function can also be used in an eager context by passing a Series.
+
+```python
+>>> s = pl.Series([12345, 12346])
+>>> pl.from_epoch(s, time_unit="d")
+shape: (2,)
+Series: '' [date]
+[
+        2003-10-20
+        2003-10-21
+]
+```
+
+### groups { #functions.groups }
+
+`groups(column)`
+
+Syntactic sugar for `pl.col("foo").agg_groups()`.
+
+### head { #functions.head }
+
+`head(column, n=10)`
+
+Get the first `n` rows.
+
+This function is syntactic sugar for `pl.col(column).head(n)`.
+
+#### Parameters
+
+| Name     | Type   | Description               | Default    |
+|----------|--------|---------------------------|------------|
+| `column` | str    | Column name.              | _required_ |
+| `n`      | int    | Number of rows to return. | `10`       |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.head("a"))
+shape: (3, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 8   │
+│ 3   │
+└─────┘
+>>> df.select(pl.head("a", 2))
+shape: (2, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 8   │
+└─────┘
+```
+
+### implode { #functions.implode }
+
+`implode(*columns)`
+
+Aggregate all column values into a list.
+
+This function is syntactic sugar for `pl.col(name).implode()`.
+
+#### Parameters
+
+| Name       | Type   | Description               | Default   |
+|------------|--------|---------------------------|-----------|
+| `*columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [9, 8, 7],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.implode("a"))
+shape: (1, 1)
+┌───────────┐
+│ a         │
+│ ---       │
+│ list[i64] │
+╞═══════════╡
+│ [1, 2, 3] │
+└───────────┘
+>>> df.select(pl.implode("b", "c"))
+shape: (1, 2)
+┌───────────┬───────────────────────┐
+│ b         ┆ c                     │
+│ ---       ┆ ---                   │
+│ list[i64] ┆ list[str]             │
+╞═══════════╪═══════════════════════╡
+│ [9, 8, 7] ┆ ["foo", "bar", "foo"] │
+└───────────┴───────────────────────┘
+```
+
+### last { #functions.last }
+
+`last(*columns)`
+
+Get the last column or value.
+
+This function has different behavior depending on the presence of `columns`
+values. If none given (the default), returns an expression that takes the last
+column of the context; otherwise, takes the last value of the given column(s).
+
+#### Parameters
+
+| Name       | Type   | Description               | Default   |
+|------------|--------|---------------------------|-----------|
+| `*columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "baz"],
+...     }
+... )
+```
+
+Return the last column:
+
+```python
+>>> df.select(pl.last())
+shape: (3, 1)
+┌─────┐
+│ c   │
+│ --- │
+│ str │
+╞═════╡
+│ foo │
+│ bar │
+│ baz │
+└─────┘
+```
+
+Return the last value for the given column(s):
+
+```python
+>>> df.select(pl.last("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 3   │
+└─────┘
+>>> df.select(pl.last("b", "c"))
+shape: (1, 2)
+┌─────┬─────┐
+│ b   ┆ c   │
+│ --- ┆ --- │
+│ i64 ┆ str │
+╞═════╪═════╡
+│ 2   ┆ baz │
+└─────┴─────┘
+```
+
+### map_batches { #functions.map_batches }
+
+`map_batches(exprs, function, return_dtype=None)`
+
+Map a custom function over multiple columns/expressions.
+
+Produces a single Series result.
+
+#### Parameters
+
+| Name           | Type                                       | Description                                                  | Default    |
+|----------------|--------------------------------------------|--------------------------------------------------------------|------------|
+| `exprs`        | Sequence\[str\] \| Sequence\[Expr\]        | Expression(s) representing the input Series to the function. | _required_ |
+| `function`     | Callable\[\[Sequence\[Series\]\], Series\] | Function to apply over the input.                            | _required_ |
+| `return_dtype` | PolarsDataType \| None                     | dtype of the output Series.                                  | `None`     |
+
+#### Returns
+
+| Type   | Description                                            |
+|--------|--------------------------------------------------------|
+| Expr   | Expression with the data type given by `return_dtype`. |
+
+#### Examples
+
+```python
+>>> def test_func(a, b, c):
+...     return a + b + c
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3, 4],
+...         "b": [4, 5, 6, 7],
+...     }
+... )
+>>>
+>>> df.with_columns(
+...     (
+...         pl.struct(["a", "b"]).map_batches(
+...             lambda x: test_func(x.struct.field("a"), x.struct.field("b"), 1)
+...         )
+...     ).alias("a+b+c")
+... )
+shape: (4, 3)
+┌─────┬─────┬───────┐
+│ a   ┆ b   ┆ a+b+c │
+│ --- ┆ --- ┆ ---   │
+│ i64 ┆ i64 ┆ i64   │
+╞═════╪═════╪═══════╡
+│ 1   ┆ 4   ┆ 6     │
+│ 2   ┆ 5   ┆ 8     │
+│ 3   ┆ 6   ┆ 10    │
+│ 4   ┆ 7   ┆ 12    │
+└─────┴─────┴───────┘
+```
+
+### map_groups { #functions.map_groups }
+
+`map_groups(exprs, function, return_dtype=None, *, returns_scalar=True)`
+
+Apply a custom/user-defined function (UDF) in a GroupBy context.
+
+.. warning::
+    This method is much slower than the native expressions API.
+    Only use it if you cannot implement your logic otherwise.
+
+#### Parameters
+
+| Name             | Type                                              | Description                                                                     | Default    |
+|------------------|---------------------------------------------------|---------------------------------------------------------------------------------|------------|
+| `exprs`          | Sequence\[str \| Expr\]                           | Expression(s) representing the input Series to the function.                    | _required_ |
+| `function`       | Callable\[\[Sequence\[Series\]\], Series \| Any\] | Function to apply over the input; should be of type Callable[[Series], Series]. | _required_ |
+| `return_dtype`   | PolarsDataType \| None                            | dtype of the output Series.                                                     | `None`     |
+| `returns_scalar` | bool                                              | If the function returns a single scalar as output.                              | `True`     |
+
+#### Returns
+
+| Type   | Description                                            |
+|--------|--------------------------------------------------------|
+| Expr   | Expression with the data type given by `return_dtype`. |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "group": [1, 1, 2],
+...         "a": [1, 3, 3],
+...         "b": [5, 6, 7],
+...     }
+... )
+>>> df
+shape: (3, 3)
+┌───────┬─────┬─────┐
+│ group ┆ a   ┆ b   │
+│ ---   ┆ --- ┆ --- │
+│ i64   ┆ i64 ┆ i64 │
+╞═══════╪═════╪═════╡
+│ 1     ┆ 1   ┆ 5   │
+│ 1     ┆ 3   ┆ 6   │
+│ 2     ┆ 3   ┆ 7   │
+└───────┴─────┴─────┘
+>>> (
+...     df.group_by("group").agg(
+...         pl.map_groups(
+...             exprs=["a", "b"],
+...             function=lambda list_of_series: list_of_series[0]
+...             / list_of_series[0].sum()
+...             + list_of_series[1],
+...         ).alias("my_custom_aggregation")
+...     )
+... ).sort("group")
+shape: (2, 2)
+┌───────┬───────────────────────┐
+│ group ┆ my_custom_aggregation │
+│ ---   ┆ ---                   │
+│ i64   ┆ list[f64]             │
+╞═══════╪═══════════════════════╡
+│ 1     ┆ [5.25, 6.75]          │
+│ 2     ┆ [8.0]                 │
+└───────┴───────────────────────┘
+```
+
+The output for group `1` can be understood as follows:
+
+- group `1` contains Series `'a': [1, 3]` and `'b': [4, 5]`
+- applying the function to those lists of Series, one gets the output
+  `[1 / 4 + 5, 3 / 4 + 6]`, i.e. `[5.25, 6.75]`
+
+### mean { #functions.mean }
+
+`mean(*columns)`
+
+Get the mean value.
+
+This function is syntactic sugar for `pl.col(columns).mean()`.
+
+#### Parameters
+
+| Name       | Type   | Description               | Default   |
+|------------|--------|---------------------------|-----------|
+| `*columns` | str    | One or more column names. | `()`      |
+
+#### See Also
+
+mean_horizontal
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.mean("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ f64 │
+╞═════╡
+│ 4.0 │
+└─────┘
+>>> df.select(pl.mean("a", "b"))
+shape: (1, 2)
+┌─────┬──────────┐
+│ a   ┆ b        │
+│ --- ┆ ---      │
+│ f64 ┆ f64      │
+╞═════╪══════════╡
+│ 4.0 ┆ 3.666667 │
+└─────┴──────────┘
+```
+
+### median { #functions.median }
+
+`median(*columns)`
+
+Get the median value.
+
+This function is syntactic sugar for `pl.col(columns).median()`.
+
+#### Parameters
+
+| Name      | Type   | Description               | Default   |
+|-----------|--------|---------------------------|-----------|
+| `columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.median("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ f64 │
+╞═════╡
+│ 3.0 │
+└─────┘
+>>> df.select(pl.median("a", "b"))
+shape: (1, 2)
+┌─────┬─────┐
+│ a   ┆ b   │
+│ --- ┆ --- │
+│ f64 ┆ f64 │
+╞═════╪═════╡
+│ 3.0 ┆ 4.0 │
+└─────┴─────┘
+```
+
+### n_unique { #functions.n_unique }
+
+`n_unique(*columns)`
+
+Count unique values.
+
+This function is syntactic sugar for `pl.col(columns).n_unique()`.
+
+#### Parameters
+
+| Name      | Type   | Description               | Default   |
+|-----------|--------|---------------------------|-----------|
+| `columns` | str    | One or more column names. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 1],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.n_unique("a"))
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ u32 │
+╞═════╡
+│ 2   │
+└─────┘
+>>> df.select(pl.n_unique("b", "c"))
+shape: (1, 2)
+┌─────┬─────┐
+│ b   ┆ c   │
+│ --- ┆ --- │
+│ u32 ┆ u32 │
+╞═════╪═════╡
+│ 3   ┆ 2   │
+└─────┴─────┘
+```
+
+### nth { #functions.nth }
+
+`nth(*indices)`
+
+Get the nth column(s) of the context.
+
+#### Parameters
+
+| Name      | Type                   | Description                                               | Default   |
+|-----------|------------------------|-----------------------------------------------------------|-----------|
+| `indices` | int \| Sequence\[int\] | One or more indices representing the columns to retrieve. | `()`      |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "baz"],
+...     }
+... )
+>>> df.select(pl.nth(1))
+shape: (3, 1)
+┌─────┐
+│ b   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 4   │
+│ 5   │
+│ 2   │
+└─────┘
+>>> df.select(pl.nth(2, 0))
+shape: (3, 2)
+┌─────┬─────┐
+│ c   ┆ a   │
+│ --- ┆ --- │
+│ str ┆ i64 │
+╞═════╪═════╡
+│ foo ┆ 1   │
+│ bar ┆ 8   │
+│ baz ┆ 3   │
+└─────┴─────┘
+```
+
+### quantile { #functions.quantile }
+
+`quantile(column, quantile, interpolation='nearest')`
+
+Syntactic sugar for `pl.col("foo").quantile(..)`.
+
+#### Parameters
+
+| Name            | Type                                                 | Description                   | Default     |
+|-----------------|------------------------------------------------------|-------------------------------|-------------|
+| `column`        | str                                                  | Column name.                  | _required_  |
+| `quantile`      | float \| Expr                                        | Quantile between 0.0 and 1.0. | _required_  |
+| `interpolation` | ('nearest', 'higher', 'lower', 'midpoint', 'linear') | Interpolation method.         | `'nearest'` |
+
+### reduce { #functions.reduce }
+
+`reduce(function, exprs)`
+
+Accumulate over multiple columns horizontally/ row wise with a left fold.
+
+#### Parameters
+
+| Name       | Type                                   | Description                                                                       | Default    |
+|------------|----------------------------------------|-----------------------------------------------------------------------------------|------------|
+| `function` | Callable\[\[Series, Series\], Series\] | Function to apply over the accumulator and the value. Fn(acc, value) -> new_value | _required_ |
+| `exprs`    | Sequence\[Expr \| str\] \| Expr        | Expressions to aggregate over. May also be a wildcard expression.                 | _required_ |
+
+#### Notes
+
+See `fold` for the version with an explicit accumulator.
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 2, 3],
+...         "b": [0, 1, 2],
+...     }
+... )
+>>> df
+shape: (3, 2)
+┌─────┬─────┐
+│ a   ┆ b   │
+│ --- ┆ --- │
+│ i64 ┆ i64 │
+╞═════╪═════╡
+│ 1   ┆ 0   │
+│ 2   ┆ 1   │
+│ 3   ┆ 2   │
+└─────┴─────┘
+```
+
+Horizontally sum over all columns.
+
+```python
+>>> df.select(
+...     pl.reduce(function=lambda acc, x: acc + x, exprs=pl.col("*")).alias("sum")
+... )
+shape: (3, 1)
+┌─────┐
+│ sum │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 3   │
+│ 5   │
+└─────┘
+```
+
+### rolling_corr { #functions.rolling_corr }
+
+`rolling_corr(a, b, *, window_size, min_periods=None, ddof=1)`
+
+Compute the rolling correlation between two columns/ expressions.
+
+.. warning::
+    This functionality is considered **unstable**. It may be changed
+    at any point without it being considered a breaking change.
+
+The window at a given row includes the row itself and the
+`window_size - 1` elements before it.
+
+#### Parameters
+
+| Name          | Type        | Description                                                                                                                         | Default    |
+|---------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `a`           | str \| Expr | Column name or Expression.                                                                                                          | _required_ |
+| `b`           | str \| Expr | Column name or Expression.                                                                                                          | _required_ |
+| `window_size` | int         | The length of the window.                                                                                                           | _required_ |
+| `min_periods` | int \| None | The number of values in the window that should be non-null before computing a result. If None, it will be set equal to window size. | `None`     |
+| `ddof`        | int         | Delta degrees of freedom. The divisor used in calculations is `N - ddof`, where `N` represents the number of elements.              | `1`        |
+
+### rolling_cov { #functions.rolling_cov }
+
+`rolling_cov(a, b, *, window_size, min_periods=None, ddof=1)`
+
+Compute the rolling covariance between two columns/ expressions.
+
+.. warning::
+    This functionality is considered **unstable**. It may be changed
+    at any point without it being considered a breaking change.
+
+The window at a given row includes the row itself and the
+`window_size - 1` elements before it.
+
+#### Parameters
+
+| Name          | Type        | Description                                                                                                                         | Default    |
+|---------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `a`           | str \| Expr | Column name or Expression.                                                                                                          | _required_ |
+| `b`           | str \| Expr | Column name or Expression.                                                                                                          | _required_ |
+| `window_size` | int         | The length of the window.                                                                                                           | _required_ |
+| `min_periods` | int \| None | The number of values in the window that should be non-null before computing a result. If None, it will be set equal to window size. | `None`     |
+| `ddof`        | int         | Delta degrees of freedom. The divisor used in calculations is `N - ddof`, where `N` represents the number of elements.              | `1`        |
+
+### select { #functions.select }
+
+`select(*exprs, **named_exprs)`
+
+Run polars expressions without a context.
+
+This is syntactic sugar for running `df.select` on an empty DataFrame.
+
+#### Parameters
+
+| Name            | Type                             | Description                                                                                                                                                               | Default   |
+|-----------------|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `*exprs`        | IntoExpr \| Iterable\[IntoExpr\] | Column(s) to select, specified as positional arguments. Accepts expression input. Strings are parsed as column names, other non-expression inputs are parsed as literals. | `()`      |
+| `**named_exprs` | IntoExpr                         | Additional columns to select, specified as keyword arguments. The columns will be renamed to the keyword used.                                                            | `{}`      |
+
+#### Returns
+
+| Type      | Description   |
+|-----------|---------------|
+| DataFrame |               |
+
+#### Examples
+
+```python
+>>> foo = pl.Series("foo", [1, 2, 3])
+>>> bar = pl.Series("bar", [3, 2, 1])
+>>> pl.select(min=pl.min_horizontal(foo, bar))
+shape: (3, 1)
+┌─────┐
+│ min │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 2   │
+│ 1   │
+└─────┘
+```
+
+### sql_expr { #functions.sql_expr }
+
+`sql_expr(sql)`
+
+Parse one or more SQL expressions to Polars expression(s).
+
+#### Parameters
+
+| Name   | Type                   | Description                  | Default    |
+|--------|------------------------|------------------------------|------------|
+| `sql`  | str \| Sequence\[str\] | One or more SQL expressions. | _required_ |
+
+#### Examples
+
+Parse a single SQL expression:
+
+```python
+>>> df = pl.DataFrame({"a": [2, 1]})
+>>> expr = pl.sql_expr("MAX(a)")
+>>> df.select(expr)
+shape: (1, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 2   │
+└─────┘
+```
+
+Parse multiple SQL expressions:
+
+```python
+>>> df.with_columns(
+...     *pl.sql_expr(["POWER(a,a) AS a_a", "CAST(a AS TEXT) AS a_txt"]),
+... )
+shape: (2, 3)
+┌─────┬─────┬───────┐
+│ a   ┆ a_a ┆ a_txt │
+│ --- ┆ --- ┆ ---   │
+│ i64 ┆ i64 ┆ str   │
+╞═════╪═════╪═══════╡
+│ 2   ┆ 4   ┆ 2     │
+│ 1   ┆ 1   ┆ 1     │
+└─────┴─────┴───────┘
+```
+
+### std { #functions.std }
+
+`std(column, ddof=1)`
+
+Get the standard deviation.
+
+This function is syntactic sugar for `pl.col(column).std(ddof)`.
+
+#### Parameters
+
+| Name     | Type   | Description                                                                                                                                   | Default    |
+|----------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `column` | str    | Column name.                                                                                                                                  | _required_ |
+| `ddof`   | int    | “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof, where N represents the number of elements. By default ddof is 1. | `1`        |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.std("a"))
+shape: (1, 1)
+┌──────────┐
+│ a        │
+│ ---      │
+│ f64      │
+╞══════════╡
+│ 3.605551 │
+└──────────┘
+>>> df["a"].std()
+3.605551275463989
+```
+
+### tail { #functions.tail }
+
+`tail(column, n=10)`
+
+Get the last `n` rows.
+
+This function is syntactic sugar for `pl.col(column).tail(n)`.
+
+#### Parameters
+
+| Name     | Type   | Description               | Default    |
+|----------|--------|---------------------------|------------|
+| `column` | str    | Column name.              | _required_ |
+| `n`      | int    | Number of rows to return. | `10`       |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     }
+... )
+>>> df.select(pl.tail("a"))
+shape: (3, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 8   │
+│ 3   │
+└─────┘
+>>> df.select(pl.tail("a", 2))
+shape: (2, 1)
+┌─────┐
+│ a   │
+│ --- │
+│ i64 │
+╞═════╡
+│ 8   │
+│ 3   │
+└─────┘
+```
+
+### var { #functions.var }
+
+`var(column, ddof=1)`
+
+Get the variance.
+
+This function is syntactic sugar for `pl.col(column).var(ddof)`.
+
+#### Parameters
+
+| Name     | Type   | Description                                                                                                                                   | Default    |
+|----------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `column` | str    | Column name.                                                                                                                                  | _required_ |
+| `ddof`   | int    | “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof, where N represents the number of elements. By default ddof is 1. | `1`        |
+
+#### Examples
+
+```python
+>>> df = pl.DataFrame(
+...     {
+...         "a": [1, 8, 3],
+...         "b": [4, 5, 2],
+...         "c": ["foo", "bar", "foo"],
+...     },
+... )
+>>> df.select(pl.var("a"))
+shape: (1, 1)
+┌──────┐
+│ a    │
+│ ---  │
+│ f64  │
+╞══════╡
+│ 13.0 │
+└──────┘
+>>> df["a"].var()
+13.0
+```

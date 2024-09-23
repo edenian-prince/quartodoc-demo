@@ -1,0 +1,76 @@
+project:
+  type: website
+
+# tell quarto to read the generated sidebar
+metadata-files:
+  - _sidebar.yml
+
+
+quartodoc:
+  # the name used to import the package you want to create reference docs for
+  package: null
+  dir: notebooks
+  source_dir: ../notebooks
+
+  # write sidebar data to this file
+  sidebar: _sidebar.yml
+
+# if you want to document files that are not a package, read this:
+  # https://machow.github.io/quartodoc/get-started/basic-content.html#documenting-source-files-that-are-not-a-package
+  sections:
+    - title: Main Functions
+      desc: Functions to inspect docstrings.
+      contents:
+        # the functions being documented in the package.
+        # you can refer to anything: class methods, modules, etc..
+        - functions
+        - group_by
+    - title: Notebooks
+      desc: Scripts and notebooks for the pipeline
+      contents:
+        - script
+
+website:
+  title: diqa-dbx-sequencing 
+  description: "Package for processing and linking sequencing disease metadata to WDRS"
+  search: true
+  repo-url: https://github.com/DOH-EPI-Coders/diqa-dbx-sequencing
+  repo-actions: [source, edit, issue]
+  navbar:
+    left:
+      - text: "Guides"
+        file: guides/index.qmd
+      - text: "Reference"
+        file: notebooks/index.qmd
+      - text: "Articles"
+        file: articles/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/edenian-prince/quartodoc-demo
+        aria-label: GitHub
+      - icon: file-richtext
+        href: https://nwpage.org/
+        aria-label: NW-PaGe
+      - icon: file-earmark-pdf-fill
+        href: https://github.com/NW-PaGe/standards/blob/main/nw-page-policies.pdf
+        aria-label: NW-PaGe PDF
+    sidebar: 
+      - id: guides
+        collapse-level: 2
+        contents: 
+          - text: "Home"
+            file: index.qmd
+          - text: "User Guide"
+            file: guides/index.qmd
+          - text: "Onboarding"
+            file: guides/onboarding.qmd
+      - id: articles
+        collapse-level: 2
+        contents: 
+          - section: "Articles"
+            contents: 
+              - articles/index.qmd
+format:
+  nwpage-html:
+    toc: true
+    theme: assets/custom.scss
